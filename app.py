@@ -93,7 +93,7 @@ def main():
     review_text = st.text_area(
         "Masukkan review",
         height=180,
-        placeholder="Contoh: Game ini sangat seru dan grafisnya keren!",
+        placeholder="Contoh: This game is really fun and the graphics are cool!",
     )
 
     if st.button("Prediksi Sentimen"):
