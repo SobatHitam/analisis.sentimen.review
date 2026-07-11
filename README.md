@@ -1,11 +1,11 @@
 # Analisis Sentimen Review Game Zenless Zone Zero
 
-Aplikasi web Streamlit untuk memprediksi sentimen review game Zenless Zone Zero menggunakan model Naive Bayes dan TF-IDF.
+Aplikasi web Streamlit untuk memprediksi sentimen review game Zenless Zone Zero menggunakan model Naive Bayes dan TF-IDF, mengikuti alur yang ada di notebook Colab.
 
 ## Fitur
 
 - Input review melalui text area
-- Preprocessing teks yang identik dengan notebook training
+- Preprocessing teks yang meniru notebook, termasuk handling negasi
 - Prediksi sentimen positif/negatif
 - Menampilkan confidence score dalam persen
 - Sidebar berisi informasi model
@@ -29,6 +29,14 @@ streamlit run app.py
 ```
 
 Aplikasi akan terbuka di browser secara otomatis.
+
+## Melatih Ulang Model
+
+Jika Anda ingin melatih ulang model sesuai dengan notebook:
+
+```bash
+python train_model.py
+```
 
 ## Deploy ke Streamlit Community Cloud
 

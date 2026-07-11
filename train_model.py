@@ -1,5 +1,5 @@
-import re
 import os
+import re
 import joblib
 import nltk
 import pandas as pd
@@ -13,6 +13,10 @@ from sklearn.naive_bayes import MultinomialNB
 DATASET_PATH = "review.csv"
 MODEL_PATH = "naive_bayes_model.joblib"
 VECTORIZER_PATH = "tfidf_vectorizer.joblib"
+NEGATION_WORDS = [
+    "not", "no", "never", "none", "hardly", "barely", "scarcely", "fewer", "less",
+    "don't", "doesn't", "didn't", "won't", "cannot",
+]
 
 
 def ensure_nltk_resources():
@@ -36,11 +40,22 @@ def clean_text(text):
     text = str(text).lower()
     text = re.sub(r"http\S+|www\.\S+", " ", text)
     text = re.sub(r"[^a-z\s]", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
 
     tokens = word_tokenize(text)
-    tokens = [word for word in tokens if word not in stop_words]
-    return " ".join(tokens)
+    processed_tokens = []
+    i = 0
+    while i < len(tokens):
+        word = tokens[i]
+        if word in NEGATION_WORDS:
+            processed_tokens.append(word)
+            if i + 1 < len(tokens) and tokens[i + 1] not in CUSTOM_STOP_WORDS:
+                processed_tokens.append(tokens[i + 1] + "_NEG")
+                i += 1
+        elif word not in CUSTOM_STOP_WORDS and word.isalpha():
+            processed_tokens.append(word)
+        i += 1
+
+    return " ".join(processed_tokens)
 
 
 def assign_sentiment(score):
@@ -86,7 +101,7 @@ def load_dataset():
 
 
 ensure_nltk_resources()
-stop_words = set(stopwords.words("english"))
+CUSTOM_STOP_WORDS = set(stopwords.words("english")).difference(NEGATION_WORDS)
 
 if __name__ == "__main__":
     df = load_dataset()

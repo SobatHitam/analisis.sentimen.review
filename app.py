@@ -1,27 +1,21 @@
 import re
-import pandas as pd
-import nltk
 import joblib
+import nltk
 import streamlit as st
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from sklearn.feature_extraction.text import TfidfVectorizer
 
 st.set_page_config(page_title="Analisis Sentimen ZZZ", layout="centered")
 
-
-@st.cache_resource
-def load_model_resources():
-    """Memuat model dan vectorizer yang sudah disimpan ke file joblib."""
-    ensure_nltk_resources()
-
-    model = joblib.load("naive_bayes_model.joblib")
-    vectorizer = joblib.load("tfidf_vectorizer.joblib")
-    return model, vectorizer
+MODEL_PATH = "naive_bayes_model.joblib"
+VECTORIZER_PATH = "tfidf_vectorizer.joblib"
+NEGATION_WORDS = [
+    "not", "no", "never", "none", "hardly", "barely", "scarcely", "fewer", "less",
+    "don't", "doesn't", "didn't", "won't", "cannot",
+]
 
 
 def ensure_nltk_resources():
-    """Mengunduh resource NLTK yang diperlukan jika belum tersedia."""
     try:
         nltk.data.find("tokenizers/punkt")
     except LookupError:
@@ -38,41 +32,56 @@ def ensure_nltk_resources():
         nltk.download("stopwords", quiet=True)
 
 
+@st.cache_resource
+def load_model_resources():
+    ensure_nltk_resources()
+    model = joblib.load(MODEL_PATH)
+    vectorizer = joblib.load(VECTORIZER_PATH)
+    return model, vectorizer
+
+
 ensure_nltk_resources()
-stop_words = set(stopwords.words("english"))
+CUSTOM_STOP_WORDS = set(stopwords.words("english")).difference(NEGATION_WORDS)
 model, vectorizer = load_model_resources()
 
 
 def clean_text(text):
-    """Melakukan preprocessing teks agar identik dengan notebook."""
     text = str(text).lower()
     text = re.sub(r"http\S+|www\.\S+", " ", text)
     text = re.sub(r"[^a-z\s]", " ", text)
-    text = re.sub(r"\s+", " ", text).strip()
 
     tokens = word_tokenize(text)
-    tokens = [word for word in tokens if word not in stop_words]
-    return " ".join(tokens)
+    processed_tokens = []
+    i = 0
+    while i < len(tokens):
+        word = tokens[i]
+        if word in NEGATION_WORDS:
+            processed_tokens.append(word)
+            if i + 1 < len(tokens) and tokens[i + 1] not in CUSTOM_STOP_WORDS:
+                processed_tokens.append(tokens[i + 1] + "_NEG")
+                i += 1
+        elif word not in CUSTOM_STOP_WORDS and word.isalpha():
+            processed_tokens.append(word)
+        i += 1
+
+    return " ".join(processed_tokens)
 
 
 def predict_sentiment(text):
-    """Melakukan preprocessing, transform TF-IDF, lalu prediksi sentimen."""
     cleaned_text = clean_text(text)
     tfidf_vector = vectorizer.transform([cleaned_text])
-    prediction = model.predict(tfidf_vector)[0]
-
-    class_names = list(model.classes_)
-    class_index = class_names.index(prediction)
-    confidence = model.predict_proba(tfidf_vector)[0][class_index] * 100
-
-    return prediction, round(confidence, 2)
+    probabilities = model.predict_proba(tfidf_vector)[0]
+    predicted_class_index = int(probabilities.argmax())
+    predicted_label = model.classes_[predicted_class_index]
+    confidence = probabilities[predicted_class_index] * 100
+    return predicted_label, round(confidence, 2)
 
 
 def main():
     st.title("Analisis Sentimen Review Game Zenless Zone Zero")
     st.write(
         "Aplikasi ini memprediksi apakah review game Zenless Zone Zero bersifat positif atau negatif "
-        "berdasarkan model Naive Bayes yang sudah dilatih."
+        "berdasarkan model Naive Bayes dan TF-IDF yang sudah dilatih."
     )
 
     with st.sidebar:
@@ -95,9 +104,9 @@ def main():
         label, confidence = predict_sentiment(review_text)
 
         if label == "positive":
-            st.success(f"Prediksi: Positif 😄")
+            st.success("Prediksi: Positif 😄")
         else:
-            st.error(f"Prediksi: Negatif 😠")
+            st.error("Prediksi: Negatif 😠")
 
         st.metric("Confidence Score", f"{confidence:.2f}%")
 
